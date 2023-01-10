@@ -1,0 +1,5 @@
+aiohttp
+aiodns
+loguru
+pyTelegramBotAPI
+moviepy
