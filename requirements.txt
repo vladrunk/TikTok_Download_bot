@@ -3,3 +3,4 @@ aiodns
 loguru
 pyTelegramBotAPI
 moviepy
+aiosqlite
