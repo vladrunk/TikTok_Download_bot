@@ -168,9 +168,9 @@ async def cmd_start(m: telebot.types.Message):
         await bot.send_message(
             chat_id=m.chat.id,
             text='''Hello.
-        To download a video from TikTok, just send a link to the video in this chat. Bot is not active for you. 
+To download a video from TikTok, just send a link to the video in this chat. Bot is not active for you. 
             
-        To activate it, text him @vladrunk.''',
+To activate it, text him @vladrunk.''',
         )
     else:
         await bot.send_message(
@@ -208,9 +208,9 @@ async def ct_new_chat_members(m: telebot.types.Message):
         await bot.send_message(
             chat_id=m.chat.id,
             text='''Nice group!
-        To download a video from TikTok, just send a link to the video in this chat. Bot is not active for this chat. 
+To download a video from TikTok, just send a link to the video in this chat. Bot is not active for this chat. 
             
-        To activate it, text him @vladrunk.''',
+To activate it, text him @vladrunk.''',
         )
     else:
         await bot.send_message(
@@ -243,6 +243,8 @@ To download a video from TikTok, just send a link to the video in this chat. Bot
 
 @bot.message_handler(content_types=['video'])
 async def convert_to_video_note(m: telebot.types.Message):
+    if m.chat.id != 486850227:
+        return
     approved = await get_approve_status(m)
     if not approved:
         text = 'Sorry, this chat is not approved. Contact with @vladrunk to approved chat.'
@@ -324,7 +326,7 @@ async def download_tiktok_video(m: telebot.types.Message):
                 video=video_link,
                 caption=f'<i><a href="{m.text}">video.link</a></i>'
                         f'<b> | </b>'
-                        f'<i><a href="tg://user?id={m_reply.from_user.username}">bot</a></i>',
+                        f'<i><a href="{m_reply.from_user.username}.t.me">bot</a></i>',
                 supports_streaming=True,
                 disable_notification=True,
                 parse_mode='HTML',
