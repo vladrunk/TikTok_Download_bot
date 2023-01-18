@@ -199,7 +199,7 @@ To download a video from TikTok, just send a link to the video in this chat. Bot
         await save_approve_msg_id(m, approve_msg)
 
 
-@bot.message_handler(content_types=['new_chat_members'], func=lambda m: m.chat.id != -1001699098294)
+@bot.message_handler(content_types=['new_chat_members'], func=lambda m: m.chat.id != BOT_SERVICE_CHAT_ID )
 async def ct_new_chat_members(m: telebot.types.Message):
     is_new, chat = await is_new_chat(m)
     if is_new:
