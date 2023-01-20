@@ -212,6 +212,14 @@ async def callback_change_approve(call):
         parse_mode='Markdown'
     )
 
+@bot.message_handler(commands=['archive'])
+async def cmd_archive(m: telebot.types.Message):
+    log.info(f'[chat={m.chat.id}][user={m.from_user.id}] '
+             f'User send /archive')
+    await bot.send_message(
+        chat_id=m.chat.id,
+        text="A channel with an archive of all the videos that have already been uploaded to the bot, here - @tiktok_super_duper_archive",
+    )
 
 @bot.message_handler(commands=['start'], chat_types=['private'])
 async def cmd_start(m: telebot.types.Message):
