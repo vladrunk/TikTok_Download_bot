@@ -3,3 +3,4 @@ pyTelegramBotAPI
 aiosqlite
 yt_dlp
 python-dotenv
+ffmpeg

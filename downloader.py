@@ -17,34 +17,33 @@ class Downloader:
         self.log.debug(f'Make dir if not exist = {self.save_path}')
         self.save_path.mkdir(parents=True, exist_ok=True)
 
-    async def __download_video(self, url) -> Path | None:
-        self.log.debug(f'Download video by {url = }')
+    async def __download_media(self, url) -> Path | None:
+        self.log.debug(f'Download media by {url = }')
         with yt_dlp.YoutubeDL(self.ydl_opts) as ydl:
             try:
                 info = ydl.extract_info(url, download=False)
-                self.log.debug(f'Video {info = }')
-                video_id = info['id']
+                self.log.debug(f'Media {info = }')
                 ydl.download([url])
-                video_path = self.save_path / f'{video_id}.mp4'
-                return video_path
+                media_path = self.save_path / f'{info["id"]}.{info["ext"]}'
+                return media_path
             except Exception as e:
-                self.log.error(f"An error occurred while downloading the video: {str(e)}")
+                self.log.error(f"An error occurred while downloading the media: {str(e)}")
                 return None
 
     async def download(self, m: telebot.types.Message) -> Path | None:
         self.log.debug(f'Process message = {str(m)}')
         try:
-            video_url = m.text
-            self.log.debug(f'{video_url = }')
-            if not video_url:
+            media_url = m.text
+            self.log.debug(f'{media_url = }')
+            if not media_url:
                 return None
 
-            video_path = await self.__download_video(video_url)
-            if video_path:
-                self.log.info(f'Video downloaded successfully = {video_path}')
-                return video_path
+            media_path = await self.__download_media(media_url)
+            if media_path:
+                self.log.info(f'Media downloaded successfully = {media_path}')
+                return media_path
             else:
-                self.log.error(f'Failed to download the video = {video_path}')
+                self.log.error(f'Failed to download the media = {media_path}')
                 return None
         except Exception as e:
             self.log.error(f"An error occurred while processing the message: {str(e)}")

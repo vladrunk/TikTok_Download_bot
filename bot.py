@@ -164,9 +164,9 @@ async def send_welcome_message(m: telebot.types.Message) -> tuple:
     return chat
 
 
-async def send_msg_to_archive(m: telebot.types.Message, m_video: telebot.types.Message, m_reply: telebot.types.Message):
+async def send_msg_to_archive(m: telebot.types.Message, m_media: telebot.types.Message, m_reply: telebot.types.Message):
     log.info(f'[chat={m.chat.id}][user={m.from_user.id}][link={m.text}] '
-             f'The send is successful id={m_video.message_id}')
+             f'The send is successful id={m_media.message_id}')
     log.info(f'[chat={m.chat.id}][user={m.from_user.id}][link={m.text}] '
              f'Delete requested message id={m.message_id}')
 
@@ -174,7 +174,7 @@ async def send_msg_to_archive(m: telebot.types.Message, m_video: telebot.types.M
 
     await bot.send_video(
         chat_id=ARCHIVE_TG_ID,
-        video=m_video.video.file_id,
+        video=m_media.video.file_id,
         caption=MSG_CAPTION_VIDEO.format(
             text=m.text,
             username=m_reply.from_user.username,
@@ -186,17 +186,17 @@ async def send_msg_to_archive(m: telebot.types.Message, m_video: telebot.types.M
     )
 
 
-async def send_video_to_chat(m: telebot.types.Message, m_reply: telebot.types.Message,
-                             video_path: Path) -> telebot.types.Message:
+async def send_media_to_chat(m: telebot.types.Message, m_reply: telebot.types.Message,
+                             media_path: Path) -> telebot.types.Message:
     log.info(f'[chat={m.chat.id}][user={m.from_user.id}][link={m.text}] '
-             f'Init send video')
+             f'Init send media')
     await bot.send_chat_action(chat_id=m.chat.id, action='upload_video')
     log.info(f'[chat={m.chat.id}][user={m.from_user.id}][link={m.text}] '
              f'Load to telegram server')
-    m_video = await bot.send_video(
+    m_media = await bot.send_video(
         chat_id=m.chat.id,
         message_thread_id=m.message_thread_id,
-        video=video_path.open('rb'),
+        video=media_path.open('rb'),
         caption=MSG_CAPTION_VIDEO.format(
             text=m.text,
             username=m_reply.from_user.username,
@@ -207,7 +207,7 @@ async def send_video_to_chat(m: telebot.types.Message, m_reply: telebot.types.Me
         parse_mode='HTML',
     )
 
-    return m_video
+    return m_media
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -301,25 +301,21 @@ async def ct_new_chat_members(m: telebot.types.Message):
 
 
 @bot.message_handler(func=check_right_link_in_msg)
-async def download_tiktok_video(m: telebot.types.Message):
+async def download_content_by_link(m: telebot.types.Message):
     approved = await get_approve_status(m)
     if not approved:
         await bot.reply_to(m, MSG_ASK_CONTACT_ADMIN)
     else:
         log.info(f'[chat={m.chat.id}][user={m.from_user.id}][link={m.text}] '
                  f'Download request id={m.message_id}')
-        m_reply = await bot.reply_to(
-            message=m,
-            text=MSG_REPLY_ON_LINK,
-        )
-        log.info(f'[chat={m.chat.id}][user={m.from_user.id}][link={m.text}] '
-                 f'Get video link')
-        video_path = await tiktok.download(m)
-        if video_path:
-            m_video = await send_video_to_chat(m=m, m_reply=m_reply, video_path=video_path)
-            if m_video:
-                await send_msg_to_archive(m=m, m_video=m_video, m_reply=m_reply)
-            video_path.unlink(missing_ok=True)
+        m_reply = await bot.reply_to(message=m, text=MSG_REPLY_ON_LINK, )
+        log.info(f'[chat={m.chat.id}][user={m.from_user.id}][link={m.text}] Get video link')
+        media_path = await tiktok.download(m)
+        if media_path:
+            m_media = await send_media_to_chat(m=m, m_reply=m_reply, media_path=media_path)
+            if m_media:
+                await send_msg_to_archive(m=m, m_media=m_media, m_reply=m_reply)
+            media_path.unlink(missing_ok=True)
 
         log.info(f'[chat={m.chat.id}][user={m.from_user.id}][link={m.text}] '
                  f'Delete reply message id={m_reply.message_id}')
