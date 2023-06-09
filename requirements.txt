@@ -1,6 +1,6 @@
 loguru
 pyTelegramBotAPI
 aiosqlite
+aiohttp
 yt_dlp
 python-dotenv
-ffmpeg
