@@ -18,10 +18,14 @@ ADMIN_TG_ID = get_env(key='ADMIN_TG_ID', default_value=42)
 # ID for Archive chat
 ARCHIVE_TG_ID = get_env(key='ARCHIVE_TG_ID', default_value=42)
 
-
-ALLOWED_TIKTOK_LINKS = ['https://www.tiktok.com/', 'https://vm.tiktok.com/', 'https://www.instagram.com/reel/', ]
+ALLOWED_TIKTOK_LINKS = [
+    'https://www.tiktok.com/',
+    'https://vm.tiktok.com/',
+    # 'https://www.instagram.com/reel/',
+    # 'https://music.youtube.com/watch',
+]
 # True if Prod mode | False is Dev mode
-PROD = False
+PROD = get_env(key='PROD', default_value=False)
 if PROD:
     # Thread: "Approve" in group: "Bot Service"
     BOT_SERVICE_CHAT_THREAD_ID = 2
@@ -40,7 +44,7 @@ TABLE = {
     'approve_msg_id': 7,
 }
 # Path to dir with video
-PATH_VIDEO = './video/'
+PATH_VIDEO = './media/'
 # Path to dir with db
 PATH_DB = './db/'
 # Name of the DB
