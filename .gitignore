@@ -3,8 +3,8 @@
 /venv
 /.idea
 /video
-config.py
 /__pycache__
 /env
 /systemd
 *.swp
+/.env
