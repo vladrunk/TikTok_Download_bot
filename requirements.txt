@@ -1,6 +1,5 @@
-aiohttp
-aiodns
 loguru
 pyTelegramBotAPI
-moviepy
 aiosqlite
+yt_dlp
+python-dotenv

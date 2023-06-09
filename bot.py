@@ -6,14 +6,17 @@ import telebot
 from telebot.async_telebot import AsyncTeleBot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 from loguru import logger as log
-import moviepy.editor as mp
-import moviepy.video.fx.all as mp_fx_all
 
-from tiktok import TikTok
-from config import BOT_TOKEN, ALLOWED_TIKTOK_LINKS, BOT_SERVICE_CHAT_ID, BOT_SERVICE_CHAT_THREAD_ID, \
+from downloader import Downloader
+from config import (
+    BOT_TOKEN, BOT_SERVICE_CHAT_ID, BOT_SERVICE_CHAT_THREAD_ID, ALLOWED_TIKTOK_LINKS,
     TABLE, PATH_DB, DB_FULLPATH, PATH_VIDEO, ADMIN_TG_ID, ARCHIVE_TG_ID
-from strings import MSG_LOG_LAUNCH, MSG_SERVICE_NEW_CHAT, MSG_SERVICE_NEW_GROUP, KBRD_DECLINE, KBRD_DECLINE_CALL, \
-    KBRD_APPROVE_CALL, KBRD_APPROVE, MSG_CAPTION_VIDEO, MSG_CHAT_NEW, MSG_CHAT_OLD, MSG_CONTACT_ADMIN
+)
+from strings import (
+    MSG_LOG_LAUNCH, MSG_SERVICE_NEW_CHAT, MSG_SERVICE_NEW_GROUP, KBRD_DECLINE, KBRD_DECLINE_CALL,
+    KBRD_APPROVE_CALL, KBRD_APPROVE, MSG_CAPTION_VIDEO, MSG_CHAT_NEW, MSG_CHAT_OLD, MSG_CONTACT_ADMIN,
+    MSG_REPLY_ON_LINK, MSG_ASK_CONTACT_ADMIN
+)
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 #
@@ -31,7 +34,7 @@ log.add(
     retention='10 days'
 )
 bot = AsyncTeleBot(token=BOT_TOKEN)
-tiktok = TikTok(logger=log)
+tiktok = Downloader(logger=log, save_path=PATH_VIDEO)
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -39,43 +42,15 @@ tiktok = TikTok(logger=log)
 # Regular services defs
 #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-def exist_path(path: str):
-    db = Path(path)
-    if db.exists():
-        return True
-    else:
-        return False
-
-
 async def update_listener(messages):
     for message in messages:
         log.info(message)
 
 
-async def resize_video(m: telebot.types.Message, video_path: str):
-    log.info(
-        f'[chat={m.chat.id}][user={m.from_user.id}][file_id={m.video.file_id}] '
-        f'Resize video'
-    )
-    clip_orig = mp.VideoFileClip(video_path)
-    w, h = clip_orig.size
-    if w > h:
-        clip_crop = mp_fx_all.crop(clip_orig, x1=(w - h) / 2, x2=w - (w - h) / 2, y1=0, y2=h)
-    else:
-        clip_crop = mp_fx_all.crop(clip_orig, x1=0, x2=w, y1=(h - w) / 2, y2=h - (h - w) / 2)
-    video_path_resized = f'{video_path}_resized.mp4'
-    clip_crop.write_videofile(video_path_resized)
-    log.info(
-        f'[chat={m.chat.id}][user={m.from_user.id}][file_id={m.video.file_id}] '
-        f'Resize video - Done'
-    )
-    return video_path_resized
-
-
-def check_tiktok_link_in_msg(m: telebot.types.Message):
+def check_right_link_in_msg(m: telebot.types.Message):
     return any([m.text.startswith(link) for link in ALLOWED_TIKTOK_LINKS]) and \
-        len(m.text.split()) < 2 and \
-        m.chat.id != BOT_SERVICE_CHAT_ID
+           len(m.text.split()) < 2 and \
+           m.chat.id != BOT_SERVICE_CHAT_ID
 
 
 async def get_chat_info(m: telebot.types.Message = None, chat_id: int = None):
@@ -105,8 +80,9 @@ async def create_chat(m: telebot.types.Message):
                 m.chat.last_name,  # last_name
                 m.chat.username,  # username
                 m.chat.title,  # title
-                m.from_user.id if m.content_type == 'new_chat_members' else m.text.split()[-1]
-                if len(m.text.split()) > 1 and m.text.split()[-1].lstrip('-').isdigit() else 0,  # invite
+                m.from_user.id if m.content_type == 'new_chat_members'
+                else m.text.split()[-1] if len(m.text.split()) > 1 and m.text.split()[-1].lstrip('-').isdigit()
+                else 0,  # invite
                 0,  # approve_msg_id
             )
         )
@@ -177,14 +153,61 @@ async def send_welcome_message(m: telebot.types.Message) -> tuple:
             text=MSG_CHAT_NEW,
         )
     else:
+        text = MSG_CHAT_OLD.format(
+                active="" if chat[TABLE["approve"]] else "not ",
+                approve="" if chat[TABLE["approve"]] else MSG_CONTACT_ADMIN
+            )
         await bot.send_message(
             chat_id=m.chat.id,
-            text=MSG_CHAT_OLD.format(
-                active={"" if chat[TABLE["approve"]] else "not "},
-                approve={"" if chat[TABLE["approve"]] else MSG_CONTACT_ADMIN}
-            ),
+            text=text,
         )
     return chat
+
+
+async def send_msg_to_archive(m: telebot.types.Message, m_video: telebot.types.Message, m_reply: telebot.types.Message):
+    log.info(f'[chat={m.chat.id}][user={m.from_user.id}][link={m.text}] '
+             f'The send is successful id={m_video.message_id}')
+    log.info(f'[chat={m.chat.id}][user={m.from_user.id}][link={m.text}] '
+             f'Delete requested message id={m.message_id}')
+
+    await bot.delete_message(chat_id=m.chat.id, message_id=m.message_id)
+
+    await bot.send_video(
+        chat_id=ARCHIVE_TG_ID,
+        video=m_video.video.file_id,
+        caption=MSG_CAPTION_VIDEO.format(
+            text=m.text,
+            username=m_reply.from_user.username,
+            invite=m.from_user.id,
+        ),
+        supports_streaming=True,
+        disable_notification=True,
+        parse_mode='HTML',
+    )
+
+
+async def send_video_to_chat(m: telebot.types.Message, m_reply: telebot.types.Message,
+                             video_path: Path) -> telebot.types.Message:
+    log.info(f'[chat={m.chat.id}][user={m.from_user.id}][link={m.text}] '
+             f'Init send video')
+    await bot.send_chat_action(chat_id=m.chat.id, action='upload_video')
+    log.info(f'[chat={m.chat.id}][user={m.from_user.id}][link={m.text}] '
+             f'Load to telegram server')
+    m_video = await bot.send_video(
+        chat_id=m.chat.id,
+        message_thread_id=m.message_thread_id,
+        video=video_path.open('rb'),
+        caption=MSG_CAPTION_VIDEO.format(
+            text=m.text,
+            username=m_reply.from_user.username,
+            invite=m.from_user.id,
+        ),
+        supports_streaming=True,
+        disable_notification=True,
+        parse_mode='HTML',
+    )
+
+    return m_video
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -212,14 +235,17 @@ async def callback_change_approve(call):
         parse_mode='Markdown'
     )
 
+
 @bot.message_handler(commands=['archive'])
 async def cmd_archive(m: telebot.types.Message):
     log.info(f'[chat={m.chat.id}][user={m.from_user.id}] '
              f'User send /archive')
     await bot.send_message(
         chat_id=m.chat.id,
-        text="A channel with an archive of all the videos that have already been uploaded to the bot, here - @tiktok_super_duper_archive",
+        text="A channel with an archive of all the videos that have already been uploaded to the bot, "
+             "here - @tiktok_super_duper_archive",
     )
+
 
 @bot.message_handler(commands=['start'], chat_types=['private'])
 async def cmd_start(m: telebot.types.Message):
@@ -274,117 +300,26 @@ async def ct_new_chat_members(m: telebot.types.Message):
         await save_approve_msg_id(m, approve_msg)
 
 
-@bot.message_handler(content_types=['video'], func=lambda m: m.chat.id == ADMIN_TG_ID)
-async def convert_to_video_note(m: telebot.types.Message):
-    approved = await get_approve_status(m)
-    if not approved:
-        text = 'Sorry, this chat is not approved. Contact with @vladrunk to approved chat.'
-        await bot.reply_to(m, text)
-    else:
-        log.info(f'[chat={m.chat.id}][user={m.from_user.id}][file_id={m.video.file_id}] '
-                 f'Get request for convert video into video_note')
-        video_path, video_path_resized = '', ''
-        if m.video.duration < 60:
-            try:
-                log.info(f'[chat={m.chat.id}][user={m.from_user.id}][file_id={m.video.file_id}] '
-                         f'Get file_path on server')
-                file_path = await bot.get_file(m.video.file_id)
-                log.info(f'[chat={m.chat.id}][user={m.from_user.id}][file_id={m.video.file_id}] '
-                         f'Download video from telegram')
-                downloaded_file = await bot.download_file(file_path.file_path)
-                file_name = m.video.file_name \
-                    if m.video.file_name \
-                    else f'{m.video.file_unique_id}.{m.video.mime_type.split("/")[1]}'
-                log.info(f'[chat={m.chat.id}][user={m.from_user.id}][file_id={m.video.file_id}] '
-                         f'Download video from Telegram {file_name}')
-                video_path = f'{PATH_VIDEO}{file_name}'
-                log.info(f'[chat={m.chat.id}][user={m.from_user.id}][file_id={m.video.file_id}] '
-                         f'Save video into SSD')
-                with open(video_path, 'wb') as f:
-                    f.write(downloaded_file)
-                video_path_resized = await resize_video(m, video_path)
-                log.info(f'[chat={m.chat.id}][user={m.from_user.id}][file_id={m.video.file_id}] '
-                         f'Send resized video to Telegram')
-                with open(video_path_resized, 'rb') as f:
-                    await bot.send_chat_action(
-                        chat_id=m.chat.id,
-                        action='upload_video'
-                    )
-                    await bot.send_video_note(
-                        chat_id=m.chat.id,
-                        data=f,
-                    )
-            finally:
-                if video_path:
-                    Path(video_path).unlink()
-                if video_path_resized:
-                    Path(video_path_resized).unlink()
-        else:
-            log.error(f'[chat={m.chat.id}][user={m.from_user.id}][file_id={m.video.file_id}] '
-                      f'The maximum duration of the video must be: 59 seconds. Current={m.video.duration} seconds.')
-            await bot.reply_to(
-                message=m,
-                text=f'The maximum duration of the video must be: 59 seconds. Current={m.video.duration} seconds.'
-                     f'\n\n'
-                     f'Error code: {m.video.file_id}'
-            )
-
-
-@bot.message_handler(func=check_tiktok_link_in_msg)
+@bot.message_handler(func=check_right_link_in_msg)
 async def download_tiktok_video(m: telebot.types.Message):
     approved = await get_approve_status(m)
     if not approved:
-        text = 'Sorry, this chat is not approved. Contact with @vladrunk to approved chat.'
-        await bot.reply_to(m, text)
+        await bot.reply_to(m, MSG_ASK_CONTACT_ADMIN)
     else:
         log.info(f'[chat={m.chat.id}][user={m.from_user.id}][link={m.text}] '
                  f'Download request id={m.message_id}')
         m_reply = await bot.reply_to(
             message=m,
-            text='Just a moment..',
+            text=MSG_REPLY_ON_LINK,
         )
         log.info(f'[chat={m.chat.id}][user={m.from_user.id}][link={m.text}] '
                  f'Get video link')
-        video_link = await tiktok.get_video(m)
-        if video_link:
-            log.info(f'[chat={m.chat.id}][user={m.from_user.id}][link={m.text}] '
-                     f'Init send video')
-            await bot.send_chat_action(chat_id=m.chat.id, action='upload_video')
-            log.info(f'[chat={m.chat.id}][user={m.from_user.id}][link={m.text}] '
-                     f'Load to telegram server')
-            m_video = await bot.send_video(
-                chat_id=m.chat.id,
-                message_thread_id=m.message_thread_id,
-                video=video_link,
-                caption=MSG_CAPTION_VIDEO.format(
-                    text=m.text,
-                    username=m_reply.from_user.username,
-                    invite=m.from_user.id,
-                ),
-                supports_streaming=True,
-                disable_notification=True,
-                parse_mode='HTML',
-            )
+        video_path = await tiktok.download(m)
+        if video_path:
+            m_video = await send_video_to_chat(m=m, m_reply=m_reply, video_path=video_path)
             if m_video:
-                log.info(f'[chat={m.chat.id}][user={m.from_user.id}][link={m.text}] '
-                         f'The send is successful id={m_video.message_id}')
-                log.info(f'[chat={m.chat.id}][user={m.from_user.id}][link={m.text}] '
-                         f'Delete requested message id={m.message_id}')
-
-                await bot.delete_message(chat_id=m.chat.id, message_id=m.message_id)
-
-                await bot.send_video(
-                    chat_id=ARCHIVE_TG_ID,
-                    video=m_video.video.file_id,
-                    caption=MSG_CAPTION_VIDEO.format(
-                        text=m.text,
-                        username=m_reply.from_user.username,
-                        invite=m.from_user.id,
-                    ),
-                    supports_streaming=True,
-                    disable_notification=True,
-                    parse_mode='HTML',
-                )
+                await send_msg_to_archive(m=m, m_video=m_video, m_reply=m_reply)
+            video_path.unlink(missing_ok=True)
 
         log.info(f'[chat={m.chat.id}][user={m.from_user.id}][link={m.text}] '
                  f'Delete reply message id={m_reply.message_id}')
@@ -397,10 +332,8 @@ async def download_tiktok_video(m: telebot.types.Message):
 #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 async def main():
-    if not exist_path(PATH_DB):
-        Path(PATH_DB).mkdir(parents=True, exist_ok=True)
-    if not exist_path(PATH_VIDEO):
-        Path(PATH_DB).mkdir(parents=True, exist_ok=True)
+    Path(PATH_DB).mkdir(parents=True, exist_ok=True)
+    Path(PATH_DB).mkdir(parents=True, exist_ok=True)
 
     async with aiosqlite.connect(DB_FULLPATH) as db:
         await db.execute('''CREATE TABLE IF NOT EXISTS chats(
