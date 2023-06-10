@@ -1,0 +1,14 @@
+[Unit]
+Description=Bot TikTok Downloader
+After=network.target
+
+[Service]
+ExecStart=/home/ubuntu/bots/tiktok/env/bin/python /home/ubuntu/bots/tiktok/bot.py
+WorkingDirectory=/home/ubuntu/bots/tiktok
+Restart=always
+User=ubuntu
+Group=ubuntu
+
+[Install]
+WantedBy=multi-user.target
+
