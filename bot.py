@@ -327,6 +327,7 @@ async def download_content_by_link(m: telebot.types.Message):
 # Main
 #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+@log.catch
 async def main():
     Path(PATH_DB).mkdir(parents=True, exist_ok=True)
     Path(PATH_DB).mkdir(parents=True, exist_ok=True)
