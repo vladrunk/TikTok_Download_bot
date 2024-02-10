@@ -11,8 +11,8 @@ def get_env(key, default_value):
 cwd = Path.cwd()
 load_dotenv(cwd / '.env')
 
-BOT_TOKEN = get_env(key='BOT_TOKEN', default_value='42424242')  # Token for bot from BotFather
-ARCHIVE_TG_ID = get_env(key='ARCHIVE_TG_ID', default_value=42)  # ID for TG channel where bot stored downloaded video
+BOT_TOKEN: str = get_env(key='BOT_TOKEN', default_value='42424242')
+ARCHIVE_TG_ID: str = get_env(key='ARCHIVE_TG_ID', default_value='@archive42')
 
 ALLOWED_TIKTOK_URLS = [
     'https://www.tiktok.com/',

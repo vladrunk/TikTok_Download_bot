@@ -15,7 +15,7 @@
    
 7. Activate the venv:  
    ```shell
-   ./venv/bin/activate
+   . ./venv/bin/activate
    ```
    
 8. Install pip requirements: 
