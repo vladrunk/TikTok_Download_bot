@@ -17,7 +17,7 @@ ARCHIVE_TG_ID: str = get_env(key='ARCHIVE_TG_ID', default_value='@archive42')
 ALLOWED_TIKTOK_URLS = [
     'https://www.tiktok.com/',
     'https://vm.tiktok.com/',
-    # 'https://www.instagram.com/reel/',
+    'https://www.instagram.com/reel/',
     # 'https://music.youtube.com/watch',
 ]
 

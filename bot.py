@@ -76,7 +76,7 @@ async def send_video_to_archive(msg: Message, video_path: Path) -> Message:
 
 
 async def forward_video_to_chat(msg: Message, msg_video: Message | None = None, video: Video | None = None):
-    log.debug(f'{msg.chat = }')
+    log.debug(f'msg.chat = {msg.chat}')
     log.debug(f'{msg.text = }')
     log.debug(f'{msg_video.video.file_id = }') if msg_video else None
     log.debug(f'{video = }') if video else None
