@@ -1,9 +1,9 @@
 /log
 /db
 /venv
-/media
+/video
 /.idea
 /__pycache__
 /env
 *.swp
-/.env*
+.env

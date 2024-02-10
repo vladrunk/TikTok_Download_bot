@@ -1,6 +1,6 @@
-loguru
-pyTelegramBotAPI
-aiosqlite
-aiohttp
-yt_dlp
-python-dotenv
+loguru==0.7.2
+aiosqlite==0.19.0
+python-dotenv==1.0.1
+pytelegrambotapi==4.15.4
+yt-dlp==2024.2.9.232659.dev0
+aiohttp==3.9.3
