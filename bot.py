@@ -69,7 +69,8 @@ async def send_video_to_archive(msg: Message, video_path: Path) -> Message:
     msg_video = await bot.send_video(
         chat_id=ARCHIVE_TG_ID, video=video_path.open('rb'),
         supports_streaming=True, disable_notification=True, parse_mode='HTML',
-        caption=MSG_CAPTION_VIDEO.format(url=msg.text, bot_username=bot_info.username, archive_username=ARCHIVE_TG_ID)
+        caption=MSG_CAPTION_VIDEO.format(url=msg.text, bot_username=bot_info.username,
+                                         archive_username=ARCHIVE_TG_ID.replace('@', ''))
     )
     log.debug(f'msg_video = {msg_video}')
     return msg_video
@@ -89,7 +90,8 @@ async def forward_video_to_chat(msg: Message, msg_video: Message | None = None, 
     await bot.send_video(
         chat_id=msg.chat.id, message_thread_id=msg.message_thread_id, video=file_id,
         supports_streaming=True, disable_notification=True, parse_mode='HTML',
-        caption=MSG_CAPTION_VIDEO.format(url=msg.text, bot_username=bot_info.username, archive_username=ARCHIVE_TG_ID),
+        caption=MSG_CAPTION_VIDEO.format(url=msg.text, bot_username=bot_info.username,
+                                         archive_username=ARCHIVE_TG_ID.replace('@', '')),
         reply_to_message_id=msg.message_id,
     )
 
