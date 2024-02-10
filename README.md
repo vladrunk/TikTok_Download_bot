@@ -10,12 +10,12 @@
    
 6. Create a venv: 
    ```shell
-   python -m venv .venv
+   python -m venv venv
    ```
    
 7. Activate the venv:  
    ```shell
-   ./venv/bin/activate
+   . ./venv/bin/activate
    ```
    
 8. Install pip requirements: 
